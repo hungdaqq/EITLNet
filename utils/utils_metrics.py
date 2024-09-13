@@ -44,16 +44,17 @@ def compute_mIoU(gt_dir, pred_dir, png_name_list, num_classes, name_classes=None
     print('Num classes', num_classes)
     hist = np.zeros((num_classes, num_classes))
     
-    gt_imgs=[]
-    for name in png_name_list:
-        path_gt=os.path.join(gt_dir, name + ".png")
-        if os.path.isfile(path_gt):
-            mask_path = os.path.join(gt_dir, name + ".png")
-        else:
-            mask_path = os.path.join(gt_dir, name + ".tif")
-        gt_imgs.append(mask_path)
+    # gt_imgs=[]
+    # for name in png_name_list:
+    #     # path_gt=os.path.join(gt_dir, name + ".png")
+    #     # if os.path.isfile(path_gt):
+    #     #     mask_path = os.path.join(gt_dir, name + ".png")
+    #     # else:
+    #     #     mask_path = os.path.join(gt_dir, name + ".tif")
+    #     mask_path = os.path.join(gt_dir, name + "_gt.png")
+    #     gt_imgs.append(mask_path)
             
-    gt_imgs = [join(gt_dir, x + ".png") for x in png_name_list]
+    gt_imgs = [join(gt_dir, x + "_gt.png") for x in png_name_list]
     pred_imgs = [join(pred_dir, x + ".png") for x in png_name_list]
 
     for ind in range(len(gt_imgs)):
