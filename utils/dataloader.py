@@ -25,29 +25,29 @@ class SegmentationDataset_train(Dataset):
         annotation_line = self.annotation_lines[index]
         name = annotation_line.strip()
         ## Processing for jpg\png\tif format in the data set
-        path_t = os.path.join(os.path.join(self.dataset_path, "JPEGImages"), name + ".jpg")
-        path_t_png = os.path.join(os.path.join(self.dataset_path, "JPEGImages"), name + ".png")
-        if os.path.isfile(path_t):
-            img = Image.open(os.path.join(os.path.join(self.dataset_path, "JPEGImages"), name + ".jpg"))
-        elif os.path.isfile(path_t_png):
-            img = Image.open(os.path.join(os.path.join(self.dataset_path, "JPEGImages"), name + ".png"))
-        else:
-            img = Image.open(os.path.join(os.path.join(self.dataset_path, "JPEGImages"), name + ".tif"))
-        
-        path_gt=os.path.join(os.path.join(self.dataset_path, "SegmentationClass"), name + ".png")
-        if os.path.isfile(path_gt):
-            mask = Image.open(os.path.join(os.path.join(self.dataset_path, "SegmentationClass"), name + ".png"))
-        else:
-            mask = Image.open(os.path.join(os.path.join(self.dataset_path, "SegmentationClass"), name + ".tif"))
+        # path_t = os.path.join(os.path.join(self.dataset_path, "JPEGImages"), name + ".jpg")
+        # path_t_png = os.path.join(os.path.join(self.dataset_path, "JPEGImages"), name + ".png")
+        # if os.path.isfile(path_t):
+        #     img = Image.open(os.path.join(os.path.join(self.dataset_path, "JPEGImages"), name + ".jpg"))
+        # elif os.path.isfile(path_t_png):
+        #     img = Image.open(os.path.join(os.path.join(self.dataset_path, "JPEGImages"), name + ".png"))
+        # else:
+        #     img = Image.open(os.path.join(os.path.join(self.dataset_path, "JPEGImages"), name + ".tif"))
+        img = Image.open(os.path.join(os.path.join(self.dataset_path, "JPEGImages"), name + ".jpg"))
+
+        # path_gt=os.path.join(os.path.join(self.dataset_path, "SegmentationClass"), name + ".png")
+        # if os.path.isfile(path_gt):
+        #     mask = Image.open(os.path.join(os.path.join(self.dataset_path, "SegmentationClass"), name + ".png"))
+        # else:
+        #     mask = Image.open(os.path.join(os.path.join(self.dataset_path, "SegmentationClass"), name + ".tif"))
+        mask = Image.open(os.path.join(os.path.join(self.dataset_path, "SegmentationClass"), name + "_gt.png"))
         # Data augmentation
         img, mask = self.get_random_data(img, mask, self.input_shape, random_flag = self.train)
         img = np.transpose(preprocess_input(np.array(img, np.float64)), [2,0,1])
         mask = np.array(mask)
         mask[mask >= self.num_classes] = self.num_classes
-
         seg_labels = np.eye(self.num_classes + 1)[mask.reshape([-1])]
         seg_labels = seg_labels.reshape((int(self.input_shape[0]), int(self.input_shape[1]), self.num_classes + 1))
-
         return img, mask, seg_labels
 
     def rand(self, a=0, b=1):

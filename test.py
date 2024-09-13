@@ -28,7 +28,7 @@ def detect_image_stride(test_path, dir_save_path):
             image_path  = os.path.join(path_out, img_name)
             image       = Image.open(image_path)
 
-            _, seg_pred= segformer.detect_image_resize(image)
+            image, seg_pred= segformer.detect_image_resize(image)
             save_name = img_name[:-4] + '.png'
             if not os.path.exists(dir_pre_path):
                 os.makedirs(dir_pre_path)
@@ -130,7 +130,6 @@ if __name__ == "__main__":
     
     test_mode(test_path,save_path)
     auc,f1,iou=evaluate(save_path,path_gt,"samples",record_txt)
-
 
 
 

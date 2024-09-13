@@ -19,21 +19,38 @@ def get_net(num_classes=2, phi='b2', pretrained=True, dual=True):
     model = SegFormer(num_classes=num_classes, phi=phi, pretrained=pretrained, dual=dual)
     return model
 
+import argparse
+
+def parse_args():
+    parser = argparse.ArgumentParser(description="Training Configuration")
+    parser.add_argument('--num_classes', type=int, default=2, help="Number of classes")
+    parser.add_argument('--model_path', type=str, default='weights/weights_EITL_new.pth', help="Path to model weights")
+    parser.add_argument('--total_epoch', type=int, default=100, help="Total number of epochs")
+    parser.add_argument('--batch_size', type=int, default=8, help="Batch size for training")
+    parser.add_argument('--init_lr', type=float, default=0.0005, help="Initial learning rate")
+    parser.add_argument('--save_period', type=int, default=5, help="Frequency of saving model (in epochs)")
+    parser.add_argument('--save_dir', type=str, default='./log/b2_network/', help="Directory to save logs and models")
+    parser.add_argument('--data_path', type=str, default='./train_dataset/', help="Path to the dataset")
+
+    args = parser.parse_args()
+    return args
+
 if __name__ == "__main__":
+    args = parse_args()
     Cuda = True
-    num_classes = 2
+    num_classes = args.num_classes
     phi = "b2" #b0
     pretrained = True
-    model_path = ''
+    model_path = args.model_path
     input_shape = [512, 512]
 
     dual = True
 
     init_epoch = 0
-    total_epoch = 100
-    batch_size = 8
+    total_epoch = args.total_epoch
+    batch_size = args.batch_size
 
-    Init_lr = 0.0005
+    Init_lr = args.init_lr
     Min_lr = Init_lr * 0.01
 
     optimizer_type = "adamw"
@@ -44,21 +61,21 @@ if __name__ == "__main__":
     lr_decay_type = 'cos'
 
     # logs
-    save_period = 5
-    save_dir = r'./log/b2_network/'
+    save_period = args.save_period
+    save_dir = args.save_dir
 
     eval_flag = True
     eval_period = 1
 
     # dataset
-    data_path = r'./train_dataset/'
+    data_path = args.data_path
 
     # loss
     dice_loss = True
     focal_loss = True
     cls_weights = np.ones([num_classes], np.float32)
 
-    num_workers = 8
+    num_workers = 1
     ngpus_per_node = torch.cuda.device_count()
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     local_rank = 0
@@ -106,7 +123,8 @@ if __name__ == "__main__":
         val_lines = f.readlines()
     num_train = len(train_lines)
     num_val = len(val_lines)
-
+    print("Num training: " + str(num_train))
+    print("Num val: " + str(num_val))
 
     nbs = 16
     lr_limit_max = 1e-4 if optimizer_type in ['adam', 'adamw'] else 5e-2

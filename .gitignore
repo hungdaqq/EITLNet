@@ -1,0 +1,6 @@
+/train_dataset
+/weights
+/eitlnet
+/__pycache__
+*.pyc
+/utils/__pycache__
