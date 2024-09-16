@@ -1,3 +1,0 @@
-./weights/weights_EITL_new.pth
-samples
-Evaluation: AUC: 0.9997, F1: 0.9882, IOU: 0.9767

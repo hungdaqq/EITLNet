@@ -11,33 +11,51 @@ import os
 import shutil
 import torch
 import warnings
+
 warnings.filterwarnings("ignore")
 torch.cuda.empty_cache()
 
 
 def detect_image_stride(test_path, dir_save_path):
-    print('Stride Test!!')
-    test_size = '512'
+    print("Stride Test!!")
+    test_size = "512"
     _, path_out = decompose(test_path, test_size)
-    print('Decomposition complete.')
-    dir_pre_path = r'test_out/temp/input_decompose_' + test_size + '_pred/'
+    print("Decomposition complete.")
+    dir_pre_path = r"test_out/temp/input_decompose_" + test_size + "_pred/"
     rm_and_make_dir(dir_pre_path)
     img_names = os.listdir(path_out)
     for img_name in tqdm(img_names):
-        if img_name.lower().endswith(('.bmp', '.dib', '.png', '.jpg', '.jpeg', '.pbm', '.pgm', '.ppm', '.tif', '.tiff')):
-            image_path  = os.path.join(path_out, img_name)
-            image       = Image.open(image_path)
+        if img_name.lower().endswith(
+            (
+                ".bmp",
+                ".dib",
+                ".png",
+                ".jpg",
+                ".jpeg",
+                ".pbm",
+                ".pgm",
+                ".ppm",
+                ".tif",
+                ".tiff",
+            )
+        ):
+            image_path = os.path.join(path_out, img_name)
+            image = Image.open(image_path)
 
-            image, seg_pred= segformer.detect_image_resize(image)
-            save_name = img_name[:-4] + '.png'
+            image, seg_pred = segformer.detect_image_resize(image)
+            save_name = img_name[:-4] + ".png"
             if not os.path.exists(dir_pre_path):
                 os.makedirs(dir_pre_path)
-            seg_pred.save(os.path.join(dir_pre_path, save_name))#Slider prediction probability plots
-    print('Prediction complete.')
-    if os.path.exists('test_out/temp/input_decompose_' + test_size + '/'):
-        shutil.rmtree('test_out/temp/input_decompose_' + test_size + '/')
-    merge(test_path, dir_pre_path, dir_save_path, test_size)#merge the predicted slider plots
-    print('Merging complete.')
+            seg_pred.save(
+                os.path.join(dir_pre_path, save_name)
+            )  # Slider prediction probability plots
+    print("Prediction complete.")
+    if os.path.exists("test_out/temp/input_decompose_" + test_size + "/"):
+        shutil.rmtree("test_out/temp/input_decompose_" + test_size + "/")
+    merge(
+        test_path, dir_pre_path, dir_save_path, test_size
+    )  # merge the predicted slider plots
+    print("Merging complete.")
     return
 
 
@@ -54,7 +72,9 @@ def metric(premask, groundtruth):
     if np.sum(cross) + np.sum(union) == 0:
         iou = 1
     return f1, iou
-def test_mode(dir_origin_path,dir_save_path):
+
+
+def test_mode(dir_origin_path, dir_save_path):
     # img_names = os.listdir(dir_origin_path)
     # for img_name in tqdm(img_names):
     #     if img_name.lower().endswith(
@@ -80,14 +100,16 @@ def test_mode(dir_origin_path,dir_save_path):
     detect_image_stride(dir_origin_path, dir_save_path)
     print("test_over!")
     return
-def evaluate(path_pre,path_gt,dataset_name,record_txt):
+
+
+def evaluate(path_pre, path_gt, dataset_name, record_txt):
     if os.path.exists(path_gt):
         flist = sorted(os.listdir(path_pre))
         auc, f1, iou = [], [], []
         for file in tqdm(flist):
             try:
                 pre = cv2.imread(path_pre + file)
-                gt = cv2.imread(path_gt + file[:-4] + '_gt.png')
+                gt = cv2.imread(path_gt + file[:-4] + "_gt.png")
                 H, W, C = pre.shape
                 Hg, Wg, C = gt.shape
                 if H != Hg or W != Wg:
@@ -95,7 +117,12 @@ def evaluate(path_pre,path_gt,dataset_name,record_txt):
                     gt[gt > 127] = 255
                     gt[gt <= 127] = 0
                 if np.max(gt) != np.min(gt):
-                    auc.append(roc_auc_score((gt.reshape(H * W * C) / 255).astype('int'), pre.reshape(H * W * C) / 255.))
+                    auc.append(
+                        roc_auc_score(
+                            (gt.reshape(H * W * C) / 255).astype("int"),
+                            pre.reshape(H * W * C) / 255.0,
+                        )
+                    )
                 pre[pre > 127] = 255
                 pre[pre <= 127] = 0
                 a, b = metric(pre / 255, gt / 255)
@@ -105,36 +132,35 @@ def evaluate(path_pre,path_gt,dataset_name,record_txt):
                 print(file)
 
         print(dataset_name)
-        print('Evaluation: AUC: %5.4f, F1: %5.4f, IOU: %5.4f' % (np.mean(auc), np.mean(f1), np.mean(iou)))
-    with open(record_txt,"a") as f:
-        f.writelines(dataset_name+"\n")
-        f.writelines('Evaluation: AUC: %5.4f, F1: %5.4f, IOU: %5.4f' % (np.mean(auc), np.mean(f1), np.mean(iou)))
+        print(
+            "Evaluation: AUC: %5.4f, F1: %5.4f, IOU: %5.4f"
+            % (np.mean(auc), np.mean(f1), np.mean(iou))
+        )
+    with open(record_txt, "a") as f:
+        f.writelines(dataset_name + "\n")
+        f.writelines(
+            "Evaluation: AUC: %5.4f, F1: %5.4f, IOU: %5.4f"
+            % (np.mean(auc), np.mean(f1), np.mean(iou))
+        )
         f.writelines("\n")
     return np.mean(auc), np.mean(f1), np.mean(iou)
 
+
 if __name__ == "__main__":
-    used_weigth=r"./weights/weights_EITL_new.pth"
-    segformer = SegFormer_Segmentation("b2",used_weigth)
-    record_txt = r"./test_out/evaluate_result.txt"
-    with open(record_txt,"a") as f:
+    used_weigth = "./weights/weights_EITL_new.pth"
+    segformer = SegFormer_Segmentation("b2", used_weigth)
+    record_txt = "./test_out/evaluate_result.txt"
+    with open(record_txt, "a") as f:
         f.writelines(str(used_weigth))
         f.writelines("\n")
-    #test_samples
-    test_path = r'./samples/tamper/'
-    save_path = r"./test_out/samples_predict/"
-    path_gt = r'./samples/gt/'
-    
+    # test_samples
+    test_path = "./train_dataset/JPEGImages/"
+    save_path = "./test_out/samples_predict/"
+    path_gt = "./train_dataset/SegmentationClass_org/"
+
     # test_path = r'F:\Datasets\DSO\tamper/'
     # save_path = r'D:\Datasets\EITLNet\DSO\Debug_no_resize/'
     # path_gt = r'F:\Datasets\DSO\gt/'
-    
-    test_mode(test_path,save_path)
-    auc,f1,iou=evaluate(save_path,path_gt,"samples",record_txt)
 
-
-
-
-
-
-
-
+    test_mode(test_path, save_path)
+    auc, f1, iou = evaluate(save_path, path_gt, "samples", record_txt)
