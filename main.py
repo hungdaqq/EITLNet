@@ -1,5 +1,5 @@
 from fastapi import FastAPI, File, UploadFile, HTTPException, APIRouter, Form
-from fastapi.responses import Response
+from fastapi.responses import Response, JSONResponse
 from io import BytesIO
 import numpy as np
 import cv2
@@ -10,32 +10,49 @@ from tqdm import tqdm
 import shutil
 from utils.test_utils_res import SegFormer_Segmentation
 from typing import Optional
+import tensorflow as tf
+from PIL import Image, ImageChops, ImageEnhance
 
 router = APIRouter(prefix="/api/v1")
 
 # Load the pre-trained SegFormer model for segmentation
 used_weigth = "./weights/weights_EITL_new.pth"
 segformer = SegFormer_Segmentation("b2", used_weigth)
+ela_model = tf.keras.models.load_model("model_data/model_casia_run1.h5")
 
-def read_imagefile(file) -> np.ndarray:
-    """
-    Read uploaded image file and convert it to OpenCV format.
 
-    Args:
-        file (UploadFile): Uploaded image file.
+def convert_to_ela_image(image, quality):
 
-    Returns:
-        np.ndarray: Image in OpenCV format (BGR).
-    """
+    ela_image = ImageChops.difference(image, image)
+
+    extrema = ela_image.getextrema()
+    max_diff = max([ex[1] for ex in extrema])
+    if max_diff == 0:
+        max_diff = 1
+    scale = 255.0 / max_diff
+
+    ela_image = ImageEnhance.Brightness(ela_image).enhance(scale)
+
+    return ela_image
+
+
+def read_imagefile(file):
     # Open image using PIL and convert to numpy array
     image = Image.open(BytesIO(file))
     return image
+
+
+def prepare_image(image, image_size=(128, 128)):
+    return (
+        np.array(convert_to_ela_image(image, 91).resize(image_size)).flatten() / 255.0
+    )
+
 
 @router.post("/predict")
 async def predict(
     file: UploadFile = File(...),
     show_boxes: Optional[bool] = Form(False),
-    show_contours: Optional[bool] = Form(True)
+    show_contours: Optional[bool] = Form(True),
 ):
     """
     Handle image segmentation prediction.
@@ -51,15 +68,27 @@ async def predict(
     try:
         # Read and save the uploaded image
         image = read_imagefile(await file.read())
-
+        image_np = np.array(image)
+        # Check if the image is authentic
+        ela_image = prepare_image(image, image_size=(128, 128))
+        preds = ela_model.predict(ela_image.reshape(-1, 128, 128, 3))
+        y_pred_class = np.argmax(preds, axis=1)[0]
+        print(f"Predict: {y_pred_class}, Confidence: {preds[0][0] * 100:.2f}")
+        if y_pred_class == 1:
+            return JSONResponse(
+                status_code=200,
+                content={
+                    "detail": "The uploaded image is authentic",
+                    "data": {"confidence": float(preds[0][0]) * 100},
+                },
+            )
         # Define the path for saving uploaded file
         test_path = f"./uploads/{file.filename}/"
         os.makedirs(test_path, exist_ok=True)
         image = image.convert("RGB")
         image.save(test_path + file.filename)
-        image_np = np.array(image)
         test_size = "512"
-        
+
         # Decompose the image for processing
         _, path_out = decompose(f"./uploads/{file.filename}/", test_size)
 
@@ -134,6 +163,7 @@ async def predict(
     except Exception as e:
         # Handle exceptions and return a server error response
         raise HTTPException(status_code=500, detail=str(e))
+
 
 app = FastAPI()
 app.include_router(router)
