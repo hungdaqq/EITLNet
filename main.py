@@ -69,6 +69,13 @@ async def predict(
         # Read and save the uploaded image
         image = read_imagefile(await file.read())
         image_np = np.array(image)
+        # Define the path for saving uploaded file
+        test_path = f"./uploads/{file.filename}/"
+        os.makedirs(test_path, exist_ok=True)
+        image = image.convert("RGB")
+        image.save(test_path + file.filename)
+        test_size = "512"
+
         # Check if the image is authentic
         ela_image = prepare_image(image, image_size=(128, 128))
         preds = ela_model.predict(ela_image.reshape(-1, 128, 128, 3))
@@ -82,12 +89,6 @@ async def predict(
                     "data": {"confidence": float(preds[0][0]) * 100},
                 },
             )
-        # Define the path for saving uploaded file
-        test_path = f"./uploads/{file.filename}/"
-        os.makedirs(test_path, exist_ok=True)
-        image = image.convert("RGB")
-        image.save(test_path + file.filename)
-        test_size = "512"
 
         # Decompose the image for processing
         _, path_out = decompose(f"./uploads/{file.filename}/", test_size)
