@@ -21,7 +21,7 @@ def detect_image_stride(test_path, dir_save_path):
     test_size = "512"
     _, path_out = decompose(test_path, test_size)
     print("Decomposition complete.")
-    dir_pre_path = r"test_out/temp/input_decompose_" + test_size + "_pred/"
+    dir_pre_path = "test_out/temp/input_decompose_" + test_size + "_pred/"
     rm_and_make_dir(dir_pre_path)
     img_names = os.listdir(path_out)
     for img_name in tqdm(img_names):
@@ -154,9 +154,9 @@ if __name__ == "__main__":
         f.writelines(str(used_weigth))
         f.writelines("\n")
     # test_samples
-    test_path = "./train_dataset/JPEGImages/"
+    test_path = "./samples/tamper/"
     save_path = "./test_out/samples_predict/"
-    path_gt = "./train_dataset/SegmentationClass_org/"
+    path_gt = "./samples/gt/"
 
     # test_path = r'F:\Datasets\DSO\tamper/'
     # save_path = r'D:\Datasets\EITLNet\DSO\Debug_no_resize/'

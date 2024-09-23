@@ -21,9 +21,15 @@ segformer = SegFormer_Segmentation("b2", used_weigth)
 ela_model = tf.keras.models.load_model("model_data/model_casia_run1.h5")
 
 
-def convert_to_ela_image(image, quality):
+def convert_to_ela_image(image_path, quality):
 
-    ela_image = ImageChops.difference(image, image)
+    temp_filename = "temp.jpg"
+
+    image = Image.open(image_path).convert("RGB")
+    image.save(temp_filename, "JPEG", quality=quality)
+    temp_image = Image.open(temp_filename)
+
+    ela_image = ImageChops.difference(image, temp_image)
 
     extrema = ela_image.getextrema()
     max_diff = max([ex[1] for ex in extrema])
@@ -42,9 +48,10 @@ def read_imagefile(file):
     return image
 
 
-def prepare_image(image, image_size=(128, 128)):
+def prepare_image(image_path, image_size=(128, 128)):
     return (
-        np.array(convert_to_ela_image(image, 91).resize(image_size)).flatten() / 255.0
+        np.array(convert_to_ela_image(image_path, 91).resize(image_size)).flatten()
+        / 255.0
     )
 
 
@@ -76,19 +83,20 @@ async def predict(
         image.save(test_path + file.filename)
         test_size = "512"
 
-        # Check if the image is authentic
-        ela_image = prepare_image(image, image_size=(128, 128))
-        preds = ela_model.predict(ela_image.reshape(-1, 128, 128, 3))
-        y_pred_class = np.argmax(preds, axis=1)[0]
-        print(f"Predict: {y_pred_class}, Confidence: {preds[0][0] * 100:.2f}")
-        if y_pred_class == 1:
-            return JSONResponse(
-                status_code=200,
-                content={
-                    "detail": "The uploaded image is authentic",
-                    "data": {"confidence": float(preds[0][0]) * 100},
-                },
-            )
+        # # Check if the image is authentic
+        # ela_image = prepare_image(test_path + file.filename, image_size=(128, 128))
+        # preds = ela_model.predict(ela_image.reshape(-1, 128, 128, 3))
+        # y_pred_class = np.argmax(preds, axis=1)[0]
+        # print(preds)
+        # print(f"Predict: {y_pred_class}, Confidence: {preds[0][0] * 100:.2f}")
+        # if y_pred_class == 1:
+        #     return JSONResponse(
+        #         status_code=200,
+        #         content={
+        #             "detail": "The uploaded image is authentic",
+        #             "data": {"confidence": float(preds[0][0]) * 100},
+        #         },
+        #     )
 
         # Decompose the image for processing
         _, path_out = decompose(f"./uploads/{file.filename}/", test_size)
@@ -117,6 +125,7 @@ async def predict(
                 image_path = os.path.join(path_out, img_name)
                 image = Image.open(image_path)
                 _, seg_pred = segformer.detect_image_resize(image)
+                print(seg_pred)
                 save_name = img_name[:-4] + ".png"
                 if not os.path.exists(dir_pre_path):
                     os.makedirs(dir_pre_path)
