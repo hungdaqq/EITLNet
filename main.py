@@ -60,6 +60,7 @@ async def predict(
     file: UploadFile = File(...),
     show_boxes: Optional[bool] = Form(False),
     show_contours: Optional[bool] = Form(True),
+    use_ela_auth: Optional[bool] = Form(False),
 ):
     """
     Handle image segmentation prediction.
@@ -76,31 +77,41 @@ async def predict(
         # Read and save the uploaded image
         image = read_imagefile(await file.read())
         image_np = np.array(image)
-        # Define the path for saving uploaded file
         test_path = f"./uploads/{file.filename}/"
         os.makedirs(test_path, exist_ok=True)
-        image = image.convert("RGB")
-        image.save(test_path + file.filename)
+        save_path = test_path + file.filename
+
+        # Check the format and adjust save options accordingly
+        if image.format == "JPEG":
+            image.save(save_path, "JPEG", quality=100)
+        elif image.format == "PNG":
+            image.save(save_path, "PNG", compress_level=0)
+        elif format == "tiff":
+            image.save(save_path, "TIFF", compression="none")
+        else:
+            image.save(save_path)
         test_size = "512"
 
-        # # Check if the image is authentic
-        # ela_image = prepare_image(test_path + file.filename, image_size=(128, 128))
-        # preds = ela_model.predict(ela_image.reshape(-1, 128, 128, 3))
-        # y_pred_class = np.argmax(preds, axis=1)[0]
-        # print(preds)
-        # print(f"Predict: {y_pred_class}, Confidence: {preds[0][0] * 100:.2f}")
-        # if y_pred_class == 1:
-        #     return JSONResponse(
-        #         status_code=200,
-        #         content={
-        #             "detail": "The uploaded image is authentic",
-        #             "data": {"confidence": float(preds[0][0]) * 100},
-        #         },
-        #     )
+        if use_ela_auth:
+            # Check if the image is authentic
+            ela_image = prepare_image(test_path + file.filename, image_size=(128, 128))
+            preds = ela_model.predict(ela_image.reshape(-1, 128, 128, 3))
+            y_pred_class = np.argmax(preds, axis=1)[0]
+            print(preds)
+            print(
+                f"Predict: {y_pred_class}, Confidence: {preds[0][y_pred_class] * 100:.2f}"
+            )
+            if y_pred_class == 1:
+                return JSONResponse(
+                    status_code=200,
+                    content={
+                        "detail": "The uploaded image is authentic",
+                        "data": {"confidence": float(preds[0][y_pred_class])},
+                    },
+                )
 
         # Decompose the image for processing
         _, path_out = decompose(f"./uploads/{file.filename}/", test_size)
-
         dir_pre_path = "test_out/temp/input_decompose_" + test_size + "_pred/"
         rm_and_make_dir(dir_pre_path)
         img_names = os.listdir(path_out)
