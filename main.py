@@ -18,7 +18,7 @@ router = APIRouter(prefix="/api/v1")
 # Load the pre-trained SegFormer model for segmentation
 used_weigth = "./weights/weights_EITL_new.pth"
 segformer = SegFormer_Segmentation("b2", used_weigth)
-ela_model = tf.keras.models.load_model("model_data/model_casia_run1.h5")
+ela_model = tf.keras.models.load_model("model_data/new_model_casia.h5")
 
 
 def convert_to_ela_image(image_path, quality):
@@ -101,7 +101,7 @@ async def predict(
             print(
                 f"Predict: {y_pred_class}, Confidence: {preds[0][y_pred_class] * 100:.2f}"
             )
-            if y_pred_class == 1:
+            if y_pred_class == 0:
                 return JSONResponse(
                     status_code=200,
                     content={
